@@ -3,13 +3,13 @@ package org.awesome.akka.http.prototype
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpResponse
-import akka.stream.ActorFlowMaterializer
 import akka.http.scaladsl.server.Directives._
+import akka.stream.ActorFlowMaterializer
 
 import scala.io.StdIn
 
-object AkkaHttpPrototype extends App {
-  implicit val actorSystem = ActorSystem("akka-http-prototype")
+object HighLevelPrototype extends App {
+  implicit val actorSystem = ActorSystem("high-level-akka-http-prototype")
   implicit val executor = actorSystem.dispatcher
   implicit val materializer = ActorFlowMaterializer()
 
