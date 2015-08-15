@@ -8,10 +8,14 @@ import akka.stream.ActorFlowMaterializer
 
 import scala.io.StdIn
 
-object HighLevelPrototype extends App {
+object HighLevelActorSystemContext {
   implicit val actorSystem = ActorSystem("high-level-akka-http-prototype")
   implicit val executor = actorSystem.dispatcher
   implicit val materializer = ActorFlowMaterializer()
+}
+
+object HighLevelPrototype extends App {
+  import HighLevelActorSystemContext._
 
   val bindingFuture = Http().bindAndHandle(Router.routes, "localhost", 8080)
 
@@ -25,7 +29,11 @@ object HighLevelPrototype extends App {
 }
 
 object Router {
-  val routes = path("version") { get {
+  import HighLevelActorSystemContext._
+  def routes = path("version") { get {
     complete(HttpResponse(entity = "1.0-SNAPSHOT"))
-  }}
+  }} ~
+  path("openrtb") { post { entity(as[String]) { body =>
+    complete(HttpResponse(entity = s"Request's body is:\n$body"))
+  }}}
 }
