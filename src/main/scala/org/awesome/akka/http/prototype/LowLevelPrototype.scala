@@ -15,13 +15,8 @@ object LowLevelPrototype extends App {
   implicit val materializer = ActorFlowMaterializer()
 
   val serverSource = Http().bind("localhost", 8080)
-  val handler: HttpRequest => HttpResponse = {
-    case HttpRequest(GET, Uri.Path("/version"), _, _, _) =>
-      HttpResponse(entity = HttpEntity("1.0-SNAPSHOT"))
-    case _: HttpRequest => HttpResponse(status = 404)
-  }
   val bindingFuture = serverSource.to(Sink.foreach(connection =>
-    connection handleWithSyncHandler handler
+    connection handleWithSyncHandler SimpleSyncHandler
   )).run()
 
   println(s"Server is running on http://localhost:8080. Press RETURN to shutdown.")
@@ -31,4 +26,12 @@ object LowLevelPrototype extends App {
     .flatMap(_.unbind())
     .flatMap(_ => Http().shutdownAllConnectionPools())
     .onComplete(_ => actorSystem.shutdown())
+}
+
+object SimpleSyncHandler extends (HttpRequest => HttpResponse) {
+  override def apply(httpRequest: HttpRequest): HttpResponse = {
+    case HttpRequest(GET, Uri.Path("/version"), _, _, _) =>
+      HttpResponse(entity = HttpEntity("1.0-SNAPSHOT"))
+    case _: HttpRequest => HttpResponse(status = 404)
+  }
 }
