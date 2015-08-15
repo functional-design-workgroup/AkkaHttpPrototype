@@ -5,6 +5,8 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpResponse
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorFlowMaterializer
+import org.json4s.DefaultFormats
+import org.json4s.jackson.JsonMethods._
 
 import scala.io.StdIn
 
@@ -30,10 +32,12 @@ object HighLevelPrototype extends App {
 
 object Router {
   import HighLevelActorSystemContext._
+  implicit val formats = DefaultFormats
   def routes = path("version") { get {
     complete(HttpResponse(entity = "1.0-SNAPSHOT"))
   }} ~
   path("openrtb") { post { entity(as[String]) { body =>
+    println(parse(body).extract[domain.BidRequest])
     complete(HttpResponse(entity = s"Request's body is:\n$body"))
   }}}
 }

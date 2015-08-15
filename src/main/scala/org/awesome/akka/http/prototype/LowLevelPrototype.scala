@@ -8,6 +8,9 @@ import akka.stream.ActorFlowMaterializer
 import akka.stream.scaladsl.Sink
 import akka.util.ByteString
 
+import org.json4s._
+import org.json4s.jackson.JsonMethods._
+
 import scala.io.StdIn
 
 import scala.concurrent._
@@ -38,10 +41,13 @@ object LowLevelPrototype extends App {
 object SimpleAsyncHandler extends (HttpRequest => Future[HttpResponse]) {
   import HighLevelActorSystemContext._
   import RequestEntityConversions._
+  implicit val formats = DefaultFormats
   override def apply(httpRequest: HttpRequest): Future[HttpResponse] = httpRequest match {
     case HttpRequest(GET, Uri.Path("/version"), _, _, _) => Future(HttpResponse(entity = HttpEntity("1.0-SNAPSHOT")))
-    case HttpRequest(POST, Uri.Path("/openrtb"), _, entity, _) => entity.toUtf8StringFuture
-      .map(json => HttpResponse(entity = json))
+    case HttpRequest(POST, Uri.Path("/openrtb"), _, entity, _) => entity.toUtf8StringFuture.map { json =>
+      println(parse(json).extract[domain.BidRequest])
+      HttpResponse(entity = json)
+    }
     case _ => Future(HttpResponse(status = 404))
   }
 }
