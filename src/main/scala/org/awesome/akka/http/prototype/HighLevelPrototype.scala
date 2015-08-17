@@ -5,13 +5,9 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse}
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorFlowMaterializer
-import org.json4s.{NoTypeHints, DefaultFormats}
-import org.json4s.jackson.JsonMethods._
-import org.json4s.jackson.Serialization
-import org.json4s.jackson.Serialization.write
+import org.awesome.akka.http.prototype.domain.request.BidRequest
 
 import scala.io.StdIn
-import domain._
 
 object HighLevelActorSystemContext {
   implicit val actorSystem = ActorSystem("high-level-akka-http-prototype")
@@ -35,14 +31,16 @@ object HighLevelPrototype extends App {
 
 object Router {
   import HighLevelActorSystemContext._
-  implicit val readFormats = DefaultFormats
-  implicit val writeFormats = Serialization.formats(NoTypeHints)
+  import JsonUtils._
   def routes = path("version") { get {
     complete(HttpResponse(entity = "1.0-SNAPSHOT"))
   }} ~
   path("openrtb") { post { entity(as[String]) { body =>
-    val bidRequest = parse(body).camelizeKeys.extract[request.BidRequest]
-    val bidResponse = handlers.handleBidRequest(bidRequest)
-    complete(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, write(bidResponse))))
+    complete {
+      HttpResponse(entity = HttpEntity(
+          ContentTypes.`application/json`,
+          handlers.handleBidRequest(body.fromJson[BidRequest]).toJson
+      ))
+    }
   }}}
 }

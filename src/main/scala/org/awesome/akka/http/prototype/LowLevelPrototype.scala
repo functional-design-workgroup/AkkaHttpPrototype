@@ -7,17 +7,11 @@ import akka.http.scaladsl.model._
 import akka.stream.ActorFlowMaterializer
 import akka.stream.scaladsl.Sink
 import akka.util.ByteString
-
-import org.json4s._
-import org.json4s.jackson.JsonMethods._
-import org.json4s.jackson.Serialization
-import org.json4s.jackson.Serialization.write
+import org.awesome.akka.http.prototype.domain.request.BidRequest
 
 import scala.io.StdIn
 
 import scala.concurrent._
-
-import domain._
 
 object LowLevelActorSystemContext {
   implicit val actorSystem = ActorSystem("low-level-akka-http-prototype")
@@ -45,14 +39,14 @@ object LowLevelPrototype extends App {
 object SimpleAsyncHandler extends (HttpRequest => Future[HttpResponse]) {
   import HighLevelActorSystemContext._
   import RequestEntityConversions._
-  implicit val readFormats = DefaultFormats
-  implicit val writeFormats = Serialization.formats(NoTypeHints)
+  import JsonUtils._
   override def apply(httpRequest: HttpRequest): Future[HttpResponse] = httpRequest match {
     case HttpRequest(GET, Uri.Path("/version"), _, _, _) => Future(HttpResponse(entity = HttpEntity("1.0-SNAPSHOT")))
     case HttpRequest(POST, Uri.Path("/openrtb"), _, entity, _) => entity.toUtf8StringFuture.map { json =>
-      val bidRequest = parse(json).camelizeKeys.extract[request.BidRequest]
-      val bidResponse = handlers.handleBidRequest(bidRequest)
-      HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, write(bidResponse)))
+      HttpResponse(entity = HttpEntity(
+        ContentTypes.`application/json`,
+        handlers.handleBidRequest(json.fromJson[BidRequest]).toJson
+      ))
     }
     case _ => Future(HttpResponse(status = 404))
   }
