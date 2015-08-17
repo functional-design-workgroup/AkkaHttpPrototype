@@ -7,7 +7,10 @@ import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorFlowMaterializer
 import org.awesome.akka.http.prototype.domain.request.BidRequest
 
+import scala.concurrent.Await
 import scala.io.StdIn
+
+import scala.concurrent.duration._
 
 object HighLevelActorSystemContext {
   implicit val actorSystem = ActorSystem("high-level-akka-http-prototype")
@@ -23,10 +26,12 @@ object HighLevelPrototype extends App {
   println(s"Server is running on http://localhost:8080. Press RETURN to shutdown.")
   StdIn.readLine()
 
-  bindingFuture
-    .flatMap(_.unbind())
-    .flatMap(_ => Http().shutdownAllConnectionPools())
-    .onComplete(_ => actorSystem.shutdown())
+  Await.result(
+    bindingFuture.flatMap(_.unbind()).flatMap(_ => Http().shutdownAllConnectionPools()), 30.seconds
+  )
+  actorSystem.shutdown()
+  actorSystem.awaitTermination(5.seconds)
+  println("Done.")
 }
 
 object Router {

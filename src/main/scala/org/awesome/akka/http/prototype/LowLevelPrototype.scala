@@ -12,6 +12,7 @@ import org.awesome.akka.http.prototype.domain.request.BidRequest
 import scala.io.StdIn
 
 import scala.concurrent._
+import scala.concurrent.duration._
 
 object LowLevelActorSystemContext {
   implicit val actorSystem = ActorSystem("low-level-akka-http-prototype")
@@ -30,14 +31,16 @@ object LowLevelPrototype extends App {
   println(s"Server is running on http://localhost:8080. Press RETURN to shutdown.")
   StdIn.readLine()
 
-  bindingFuture
-    .flatMap(_.unbind())
-    .flatMap(_ => Http().shutdownAllConnectionPools())
-    .onComplete(_ => actorSystem.shutdown())
+  Await.result(
+    bindingFuture.flatMap(_.unbind()).flatMap(_ => Http().shutdownAllConnectionPools()), 30.seconds
+  )
+  actorSystem.shutdown()
+  actorSystem.awaitTermination(5.seconds)
+  println("Done.")
 }
 
 object SimpleAsyncHandler extends (HttpRequest => Future[HttpResponse]) {
-  import HighLevelActorSystemContext._
+  import LowLevelActorSystemContext._
   import RequestEntityConversions._
   import JsonUtils._
   override def apply(httpRequest: HttpRequest): Future[HttpResponse] = httpRequest match {
