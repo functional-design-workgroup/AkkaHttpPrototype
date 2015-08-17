@@ -2,7 +2,9 @@ lazy val root = (project in file(".")).
   settings(
     name := "AkkaHttpPrototype",
     version := "1.0-SNAPSHOT",
-    scalaVersion := "2.11.4"
+    scalaVersion := "2.11.4",
+    assemblyJarName := s"akka-http-prototype.jar",
+    mainClass in assembly := Some("org.awesome.akka.http.prototype.LowLevelPrototype")
   )
 
 libraryDependencies ++= {
