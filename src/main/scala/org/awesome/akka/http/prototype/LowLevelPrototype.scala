@@ -1,18 +1,21 @@
 package org.awesome.akka.http.prototype
 
 import akka.actor.ActorSystem
+import akka.actor.Status.Success
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpMethods._
 import akka.http.scaladsl.model._
 import akka.stream.ActorFlowMaterializer
 import akka.stream.scaladsl.Sink
 import akka.util.ByteString
+import kamon.Kamon
 import org.awesome.akka.http.prototype.domain.request.BidRequest
 
 import scala.io.StdIn
 
 import scala.concurrent._
 import scala.concurrent.duration._
+import scala.util.{Failure, Try}
 
 object LowLevelActorSystemContext {
   implicit val actorSystem = ActorSystem("low-level-akka-http-prototype")
@@ -21,6 +24,7 @@ object LowLevelActorSystemContext {
 }
 
 object LowLevelPrototype extends App {
+  Kamon.start()
   import LowLevelActorSystemContext._
 
   val serverSource = Http().bind("localhost", 8080)
@@ -28,7 +32,7 @@ object LowLevelPrototype extends App {
     connection handleWithAsyncHandler SimpleAsyncHandler
   )).run()
 
-  println(s"Server is running on http://localhost:8080. Press RETURN to shutdown.")
+  actorSystem.log.info(s"Server is running on http://localhost:8080. Press RETURN to shutdown.")
   StdIn.readLine()
 
   Await.result(
@@ -37,6 +41,7 @@ object LowLevelPrototype extends App {
   actorSystem.shutdown()
   actorSystem.awaitTermination(5.seconds)
   println("Done.")
+  Kamon.shutdown()
 }
 
 object SimpleAsyncHandler extends (HttpRequest => Future[HttpResponse]) {
@@ -45,11 +50,10 @@ object SimpleAsyncHandler extends (HttpRequest => Future[HttpResponse]) {
   import JsonUtils._
   override def apply(httpRequest: HttpRequest): Future[HttpResponse] = httpRequest match {
     case HttpRequest(GET, Uri.Path("/version"), _, _, _) => Future(HttpResponse(entity = HttpEntity("1.0-SNAPSHOT")))
-    case HttpRequest(POST, Uri.Path("/openrtb"), _, entity, _) => entity.toUtf8StringFuture.map { json =>
-      HttpResponse(entity = HttpEntity(
-        ContentTypes.`application/json`,
-        handlers.handleBidRequest(json.fromJson[BidRequest]).toJson
-      ))
+    case HttpRequest(POST, Uri.Path("/openrtb/bsw"), _, entity, _) => entity.toUtf8StringFuture.map { json =>
+      Try(handlers.handleBidRequest(json.fromJson[BidRequest]).toJson)
+        .map(body => HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, body)))
+        .getOrElse(HttpResponse(status = StatusCodes.NoContent))
     }
     case _ => Future(HttpResponse(status = 404))
   }

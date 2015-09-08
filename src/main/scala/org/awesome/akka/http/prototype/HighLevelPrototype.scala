@@ -2,15 +2,17 @@ package org.awesome.akka.http.prototype
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse}
+import akka.http.scaladsl.model.{StatusCodes, HttpEntity, ContentTypes, HttpResponse}
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorFlowMaterializer
+import kamon.Kamon
 import org.awesome.akka.http.prototype.domain.request.BidRequest
 
 import scala.concurrent.Await
 import scala.io.StdIn
 
 import scala.concurrent.duration._
+import scala.util.Try
 
 object HighLevelActorSystemContext {
   implicit val actorSystem = ActorSystem("high-level-akka-http-prototype")
@@ -19,11 +21,12 @@ object HighLevelActorSystemContext {
 }
 
 object HighLevelPrototype extends App {
+  Kamon.start()
   import HighLevelActorSystemContext._
 
   val bindingFuture = Http().bindAndHandle(Router.routes, "localhost", 8080)
 
-  println(s"Server is running on http://localhost:8080. Press RETURN to shutdown.")
+  actorSystem.log.info(s"Server is running on http://localhost:8080. Press RETURN to shutdown.")
   StdIn.readLine()
 
   Await.result(
@@ -32,6 +35,7 @@ object HighLevelPrototype extends App {
   actorSystem.shutdown()
   actorSystem.awaitTermination(5.seconds)
   println("Done.")
+  Kamon.shutdown()
 }
 
 object Router {
@@ -40,12 +44,11 @@ object Router {
   def routes = path("version") { get {
     complete(HttpResponse(entity = "1.0-SNAPSHOT"))
   }} ~
-  path("openrtb") { post { entity(as[String]) { body =>
+  path("openrtb/bsw") { post { entity(as[String]) { body =>
     complete {
-      HttpResponse(entity = HttpEntity(
-          ContentTypes.`application/json`,
-          handlers.handleBidRequest(body.fromJson[BidRequest]).toJson
-      ))
+      Try(handlers.handleBidRequest(body.fromJson[BidRequest]).toJson)
+        .map(body => HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, body)))
+        .getOrElse(HttpResponse(status = StatusCodes.NoContent))
     }
   }}}
 }
