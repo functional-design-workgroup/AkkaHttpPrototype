@@ -46,9 +46,10 @@ object Router {
   }} ~
   path("openrtb/bsw") { post { entity(as[String]) { body =>
     complete {
-      Try(handlers.handleBidRequest(body.fromJson[BidRequest]).toJson)
+      val httpResponse: HttpResponse = Try(handlers.handleBidRequest(body.fromJson[BidRequest]).toJson)
         .map(body => HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, body)))
         .getOrElse(HttpResponse(status = StatusCodes.NoContent))
+      httpResponse
     }
   }}}
 }

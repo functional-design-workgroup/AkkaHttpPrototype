@@ -51,9 +51,10 @@ object SimpleAsyncHandler extends (HttpRequest => Future[HttpResponse]) {
   override def apply(httpRequest: HttpRequest): Future[HttpResponse] = httpRequest match {
     case HttpRequest(GET, Uri.Path("/version"), _, _, _) => Future(HttpResponse(entity = HttpEntity("1.0-SNAPSHOT")))
     case HttpRequest(POST, Uri.Path("/openrtb/bsw"), _, entity, _) => entity.toUtf8StringFuture.map { json =>
-      Try(handlers.handleBidRequest(json.fromJson[BidRequest]).toJson)
+      val httpResponse: HttpResponse = Try(handlers.handleBidRequest(json.fromJson[BidRequest]).toJson)
         .map(body => HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, body)))
         .getOrElse(HttpResponse(status = StatusCodes.NoContent))
+      httpResponse
     }
     case _ => Future(HttpResponse(status = 404))
   }

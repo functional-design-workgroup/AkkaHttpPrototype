@@ -27,6 +27,7 @@ libraryDependencies ++= {
     "org.json4s"        %% "json4s-jackson"                       % json4sV,
     "io.kamon"          %% "kamon-core"                           % kamonV,
     "io.kamon"          %% "kamon-akka"                           % kamonV,
-    "io.kamon"          %% "kamon-log-reporter"                   % kamonV
+    "io.kamon"          %% "kamon-log-reporter"                   % kamonV,
+    "io.kamon"          %% "kamon-datadog"                        % kamonV
   )
 }
